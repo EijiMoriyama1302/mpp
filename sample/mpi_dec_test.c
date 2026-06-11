@@ -62,7 +62,7 @@ static int dec_simple(MpiDecLoopData *data)
     FrmCrc *checkcrc = &data->checkcrc;
 
     // when packet size is valid read the input binary file
-    ret = reader_read(cmd->reader, &slot);
+    ret = reader_read(cmd->reader, &slot); //ファイルからslot作成
 
     mpp_assert(ret == MPP_OK);
     mpp_assert(slot);
@@ -108,7 +108,7 @@ static int dec_simple(MpiDecLoopData *data)
             MppFrame frame = NULL;
 
         try_again:
-            ret = mpi->decode_get_frame(ctx, &frame);
+            ret = mpi->decode_get_frame(ctx, &frame); //frameを読み込み
             if (MPP_ERR_TIMEOUT == ret) {
                 if (times > 0) {
                     times--;
@@ -360,6 +360,7 @@ DONE:
     return ret;
 }
 
+//スレッド
 void *thread_decode(void *arg)
 {
     MpiDecLoopData *data = (MpiDecLoopData *)arg;
@@ -376,7 +377,7 @@ void *thread_decode(void *arg)
 
     if (cmd->simple) {
         while (!data->loop_end)
-            dec_simple(data);
+            dec_simple(data); //ファイル読込とフレーム取得を1対1
     } else {
         /* NOTE: change output format before jpeg decoding */
         if (MPP_FRAME_FMT_IS_YUV(cmd->format) || MPP_FRAME_FMT_IS_RGB(cmd->format)) {
@@ -419,7 +420,7 @@ int dec_decode(MpiDecTestCmd *cmd)
     // paramter for resource malloc
     RK_U32 width        = cmd->width;
     RK_U32 height       = cmd->height;
-    MppCodingType type  = cmd->type;
+    MppCodingType type  = cmd->type; //コーデックを指定、rk_type.hでコーデックの種類を定義
 
     // config for runtime mode
     MppDecCfg cfg       = NULL;
@@ -507,7 +508,7 @@ int dec_decode(MpiDecTestCmd *cmd)
     mpp_log("%p mpi_dec_test decoder test start w %d h %d type %d\n",
             ctx, width, height, type);
 
-    ret = mpp_init(ctx, MPP_CTX_DEC, type);
+    ret = mpp_init(ctx, MPP_CTX_DEC, type); //コーデックの指定
     if (ret) {
         mpp_err("%p mpp_init failed\n", ctx);
         goto MPP_TEST_OUT;
