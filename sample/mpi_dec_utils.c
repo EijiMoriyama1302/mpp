@@ -81,6 +81,7 @@ typedef struct DecBufMgrImpl_t {
 
 #define READ_ONCE(var) (*((volatile typeof(var) *)(&(var))))
 
+// デコーダへのデータ送信(impl:送信データの管理、slot:送信データパケット)
 static MPP_RET add_new_slot(FileReaderImpl* impl, FileBufSlot *slot)
 {
     mpp_assert(impl);
@@ -90,7 +91,7 @@ static MPP_RET add_new_slot(FileReaderImpl* impl, FileBufSlot *slot)
     impl->slot_cnt++;
 
     if (impl->slot_cnt >= impl->slot_max) {
-        impl->slots = mpp_realloc(impl->slots, FileBufSlot*, impl->slot_max * 2);
+        impl->slots = mpp_realloc(impl->slots, FileBufSlot*, impl->slot_max * 2); //データ追加
         if (!impl->slots)
             return MPP_NOK;
 
@@ -103,12 +104,13 @@ static MPP_RET add_new_slot(FileReaderImpl* impl, FileBufSlot *slot)
     return MPP_OK;
 }
 
+// 以下、ファイルからの読み込み処理(data:入力ファイルのファイルポインタ等、implに入れて使う)
 static FileBufSlot *read_ivf_file(FileReader data)
 {
     FileReaderImpl *impl = (FileReaderImpl*)data;
     RK_U8 ivf_data[IVF_FRAME_HEADER_LENGTH] = {0};
     size_t ivf_data_size = IVF_FRAME_HEADER_LENGTH;
-    FILE *fp = impl->fp_input;
+    FILE *fp = impl->fp_input;  //読み込むファイルポインタ
     FileBufSlot *slot = NULL;
     size_t data_size = 0;
     size_t read_size = 0;
@@ -124,9 +126,9 @@ static FileBufSlot *read_ivf_file(FileReader data)
 
     impl->read_total += ivf_data_size;
     data_size = ivf_data[0] | (ivf_data[1] << 8) | (ivf_data[2] << 16) | (ivf_data[3] << 24);
-    slot = mpp_malloc_size(FileBufSlot, MPP_ALIGN(sizeof(FileBufSlot) + data_size, SZ_4K));
+    slot = mpp_malloc_size(FileBufSlot, MPP_ALIGN(sizeof(FileBufSlot) + data_size, SZ_4K)); //slotのメモリ確保
     slot->data = (char *)(slot + 1);
-    read_size = fread(slot->data, 1, data_size, fp);
+    read_size = fread(slot->data, 1, data_size, fp); //ファイルからslot->dataに読込
     impl->read_total += read_size;
     impl->read_size = read_size;
 
@@ -196,7 +198,9 @@ static FileBufSlot *read_normal_file(FileReader data)
 
     return slot;
 }
+// 以上、ファイルからの読み込み処理(data:入力ファイルのファイルポインタ等、implに入れて使う)
 
+// ファイルの拡張子からファイルからの読み込み方を変える
 static void check_file_type(FileReader data, char *file_in, MppCodingType type)
 {
     FileReaderImpl *impl = (FileReaderImpl*)data;
